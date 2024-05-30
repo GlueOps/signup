@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from flask import Flask, redirect, request, session, url_for, render_template
 from glueops.setup_logging import configure as go_configure_logging
@@ -20,8 +21,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_
 try:
     app.secret_key = os.env('APP_SECRET_KEY')
 except AttributeError:
-    logger.warn(f'could not retrieve APP_SECRET_KEY from env, falling back to random value')
-    app.secret_key = os.urandom(24)
+    logger.warn(f'could not retrieve APP_SECRET_KEY from env, falling back to generated secret')
+    app.secret_key = secrets.token_urlsafe(24)
 
 try:
     client_id = os.env('GITHUB_CLIENT_ID')
