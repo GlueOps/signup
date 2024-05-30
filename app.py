@@ -42,6 +42,9 @@ emails_url = 'https://api.github.com/user/emails'
 slack_client = WebClient(token=slack_token)
 
 redirect_url = os.getenv('REDIRECT_URL', 'https://www.glueops.dev/book-a-demo/')
+APP_PORT = os.getenv('APP_PORT', 5000)
+DEBUG_ENABLED = os.getenv('DEBUG_ENABLED', False)
+
 
 
 @app.route('/')
@@ -85,4 +88,4 @@ def logout():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=APP_PORT, debug=DEBUG_ENABLED)
