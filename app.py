@@ -24,10 +24,10 @@ except AttributeError:
     app.secret_key = os.urandom(24)
 
 try:
-    client_id = os.getenv('GITHUB_CLIENT_ID')
-    client_secret = os.getenv('GITHUB_CLIENT_SECRET')
-    slack_token = os.getenv('SLACK_API_TOKEN')
-    slack_channel = os.getenv('SLACK_CHANNEL')
+    client_id = os.env('GITHUB_CLIENT_ID')
+    client_secret = os.env('GITHUB_CLIENT_SECRET')
+    slack_token = os.env('SLACK_API_TOKEN')
+    slack_channel = os.env('SLACK_CHANNEL')
 except AttributeError:
     logger.exception('could not retrieve environment secret')
     raise
