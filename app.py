@@ -20,7 +20,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_
 
 try:
     app.secret_key = os.environ['APP_SECRET_KEY']
-except AttributeError:
+except KeyError:
     logger.warn(f'could not retrieve APP_SECRET_KEY from env, falling back to generated secret')
     app.secret_key = secrets.token_urlsafe(24)
 
