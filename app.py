@@ -19,16 +19,16 @@ app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 try:
-    app.secret_key = os.env('APP_SECRET_KEY')
+    app.secret_key = os.environ('APP_SECRET_KEY')
 except AttributeError:
     logger.warn(f'could not retrieve APP_SECRET_KEY from env, falling back to generated secret')
     app.secret_key = secrets.token_urlsafe(24)
 
 try:
-    client_id = os.env('GITHUB_CLIENT_ID')
-    client_secret = os.env('GITHUB_CLIENT_SECRET')
-    slack_token = os.env('SLACK_API_TOKEN')
-    slack_channel = os.env('SLACK_CHANNEL')
+    client_id = os.environ('GITHUB_CLIENT_ID')
+    client_secret = os.environ('GITHUB_CLIENT_SECRET')
+    slack_token = os.environ('SLACK_API_TOKEN')
+    slack_channel = os.environ('SLACK_CHANNEL')
 except AttributeError:
     logger.exception('could not retrieve environment secret')
     raise
