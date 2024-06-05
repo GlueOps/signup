@@ -50,36 +50,61 @@ DEBUG_ENABLED = os.getenv('DEBUG_ENABLED', False)
 
 @app.route('/')
 def login():
-    github = OAuth2Session(client_id)
-    authorization_url, state = github.authorization_url(authorization_base_url)
-    session['oauth_state'] = state
-    logger.info(f'oauth_state: {state}')
-    return redirect(authorization_url)
+    try:
+        github = OAuth2Session(client_id)
+        authorization_url, state = github.authorization_url(authorization_base_url)
+        session['oauth_state'] = state
+        logger.info(f'oauth_state: {state}')
+        return redirect(authorization_url)
+    except Exception:
+        logger.exception('failed to create GitHub OAuth2Session')
 
 @app.route('/callback')
 def callback():
-    github = OAuth2Session(client_id, state=session['oauth_state'])
-    token = github.fetch_token(token_url, client_secret=client_secret, authorization_response=request.url)
-    session['oauth_token'] = token
-    return redirect(url_for('.profile'))
+    try:
+        github = OAuth2Session(client_id, state=session['oauth_state'])
+        token = github.fetch_token(
+            token_url,
+            client_secret=client_secret,
+            authorization_response=request.url
+        )
+        session['oauth_token'] = token
+        return redirect(url_for('.profile'))
+    except Exception:
+        logger.exception('failed to generate session oauth token')
 
 @app.route('/profile')
 def profile():
-    github = OAuth2Session(client_id, token=session['oauth_token'])
-    user = github.get(user_url).json()
-    logger.info(f'gh user info: {user}')
-    github_handle = user["login"]
-    github_emails = github.get(emails_url).json()
-
     try:
-        response = slack_client.chat_postMessage(
-            channel=slack_channel,
-            text=f"New signup: GitHub Handle: {github_handle}, Email: {github_emails}"
-        )
-        logger.info(f'slack response: {response}')
-    except SlackApiError as e:
-        logger.error(f"Error sending message to Slack: {e.response['error']}")
+        github = OAuth2Session(client_id, token=session['oauth_token'])
+        user = github.get(user_url).json()
+        logger.info(f'gh user info: {user}')
+        github_handle = user["login"]
+        github_emails = github.get(emails_url).json()
+        email_list = "\n".join([
+            f"- {email['email']} (Primary: {email['primary']}, Verified: {email['verified']})"
+            for email in github_emails
+        ])
 
+
+        try:
+            response = slack_client.chat_postMessage(
+                channel=slack_channel,
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*New signup*\n*GitHub Handle:* `{github_handle}`\n*Email Addresses:*\n{email_list}"
+                        }
+                    }
+                ]
+            )
+            logger.info(f'slack response: {response}')
+        except SlackApiError as e:
+            logger.exception(f"Error sending message to Slack: {e.response['error']}")
+    except Exception:
+        logger.exception(f'failed to retrieve use metatdata from github')
     return redirect(redirect_url)
 
 @app.route('/logout')
