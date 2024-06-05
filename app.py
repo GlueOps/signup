@@ -81,11 +81,24 @@ def profile():
         logger.info(f'gh user info: {user}')
         github_handle = user["login"]
         github_emails = github.get(emails_url).json()
+        email_list = "\n".join([
+            f"- {email['email']} (Primary: {email['primary']}, Verified: {email['verified']})"
+            for email in github_emails
+        ])
+
 
         try:
             response = slack_client.chat_postMessage(
                 channel=slack_channel,
-                text=f"New signup: GitHub Handle: {github_handle}, Email: {github_emails}"
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": f"*New signup*\n*GitHub Handle:* `{github_handle}`\n*Email Addresses:*\n{email_list}"
+                        }
+                    }
+                ]
             )
             logger.info(f'slack response: {response}')
         except SlackApiError as e:
