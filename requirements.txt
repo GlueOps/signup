@@ -1,6 +1,6 @@
 Flask==3.0.3
 requests-oauthlib==2.0.0
 slack-sdk==3.33.1
-Werkzeug==3.0.4
+Werkzeug==3.0.6
 gunicorn==23.0.0
 glueops-helpers @ https://github.com/GlueOps/python-glueops-helpers-library/archive/refs/tags/v0.4.1.zip
