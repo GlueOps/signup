@@ -3,7 +3,6 @@ import secrets
 
 from flask import Flask, redirect, request, session, url_for, render_template
 from glueops.setup_logging import configure as go_configure_logging
-from requests_oauthlib import OAuth2Session
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -25,19 +24,12 @@ except KeyError:
     app.secret_key = secrets.token_urlsafe(24)
 
 try:
-    client_id = os.environ['GITHUB_CLIENT_ID']
-    client_secret = os.environ['GITHUB_CLIENT_SECRET']
     slack_token = os.environ['SLACK_API_TOKEN']
     slack_channel = os.environ['SLACK_CHANNEL']
 except KeyError:
     logger.exception('could not retrieve environment secret')
     raise
 
-
-authorization_base_url = 'https://github.com/login/oauth/authorize'
-token_url = 'https://github.com/login/oauth/access_token'
-user_url = 'https://api.github.com/user'
-emails_url = 'https://api.github.com/user/emails'
 
 
 slack_client = WebClient(token=slack_token)
@@ -48,63 +40,27 @@ DEBUG_ENABLED = os.getenv('DEBUG_ENABLED', False)
 
 
 
-@app.route('/')
+@app.route('/', methods=["POST"])
 def login():
+    email = request.form.get('email')
+    session['email'] = email
+    logger.info(f'email: {email}')
     try:
-        github = OAuth2Session(client_id)
-        authorization_url, state = github.authorization_url(authorization_base_url)
-        session['oauth_state'] = state
-        logger.info(f'oauth_state: {state}')
-        return redirect(authorization_url)
-    except Exception:
-        logger.exception('failed to create GitHub OAuth2Session')
-
-@app.route('/callback')
-def callback():
-    try:
-        github = OAuth2Session(client_id, state=session['oauth_state'])
-        token = github.fetch_token(
-            token_url,
-            client_secret=client_secret,
-            authorization_response=request.url
-        )
-        session['oauth_token'] = token
-        return redirect(url_for('.profile'))
-    except Exception:
-        logger.exception('failed to generate session oauth token')
-
-@app.route('/profile')
-def profile():
-    try:
-        github = OAuth2Session(client_id, token=session['oauth_token'])
-        user = github.get(user_url).json()
-        logger.info(f'gh user info: {user}')
-        github_handle = user["login"]
-        github_emails = github.get(emails_url).json()
-        email_list = "\n".join([
-            f"- {email['email']} (Primary: {email['primary']}, Verified: {email['verified']})"
-            for email in github_emails
-        ])
-
-
-        try:
-            response = slack_client.chat_postMessage(
-                channel=slack_channel,
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": f"*New signup*\n*GitHub Handle:* `{github_handle}`\n*Email Addresses:*\n{email_list}"
-                        }
+        response = slack_client.chat_postMessage(
+            channel=slack_channel,
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"*New signup*\n*Email Addresses:*\n{email}"
                     }
-                ]
-            )
-            logger.info(f'slack response: {response}')
-        except SlackApiError as e:
-            logger.exception(f"Error sending message to Slack: {e.response['error']}")
-    except Exception:
-        logger.exception(f'failed to retrieve use metatdata from github')
+                }
+            ]
+        )
+        logger.info(f'slack response: {response}')
+    except SlackApiError as e:
+        logger.exception(f"Error sending message to Slack: {e.response['error']}")
     return redirect(redirect_url)
 
 @app.route('/logout')
